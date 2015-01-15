@@ -1,0 +1,161 @@
+---
+title: "HW #1 - Portfolio Construction"
+author: "Ivan Rodriguez"
+output:
+  pdf_document:
+    toc: true
+    highlight: default
+---
+
+
+---
+
+#Data Notes
+
+The data used in the analysis is the Fama French portfolio and factors database from WRDS. The data are monthly value weighted return observations on the 6 portfolio constructed by Fama and French formed on size and book to market. The time period of the data is from March 2000 to the end of July 2014. The portfolio variable names are as follows:
+
+- SMLO (small size and low book-to-market ratio equities),
+- SMME (small size and medium book-to-market ratio equities),
+- SMHI (small size and high book-to-market ratio equities),
+- BILO (big size and low book-to-market ratio equities),
+- BIME (big size and medium book-to-market ratio equities),
+- BIHI (big size and high book-to-market ratio equities)
+
+Here is a small sample of the data that was used:
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#Set working directory
+setwd("~/Documents/projects/class/FIN7809_theoryII/HW1")
+
+#Loading in data file
+data.FF1 <- read.csv(file = "FF1.csv", head = TRUE, sep = ",")
+data.FF2 <- read.csv(file = "FF2.csv", head = TRUE, sep = ",")
+
+#Loading dplyr package to transform raw data
+library("dplyr")
+library("ggplot2")
+library("GGally")
+library("reshape2")
+
+### DATA CLEANING ###
+data.1 <- tbl_df(data.FF1) #Simplify data frame using tbl_df
+data.2 <- tbl_df(data.FF2) #Simplify data frame using tbl_df
+
+#Select relevant variables
+data1 <- select(data.1, date,smlo_vwret,smme_vwret,smhi_vwret,bilo_vwret,bime_vwret,bihi_vwret)
+data2 <- select(data.2, date = dateff, rf)
+
+#Create final data set of interest
+data <- inner_join(data1, data2, by="date")
+data.portfolio <- select(data, -date, -rf)
+
+n <- ncol(data.portfolio) #number of assets
+
+glimpse(data)
+```
+
+#Questions
+Before proceeding with answering the homework questions, we need to initialize a few things first, namely the unity vector. The unity vector $\boldsymbol{\iota}$ is the `r n` x 1 vector of ones.
+
+```{r}
+i <- 1 + numeric(n) #creating unity vector
+```
+
+##1a. The 6x1 vector of mean returns, $\boldsymbol{\mu}$.
+The vector $\boldsymbol{\mu}$ is the `r n` x 1 vector of the mean returns.
+```{r}
+mu <- sapply(data.portfolio, mean)
+mu
+```
+
+##1b. The 6x6 covariance matrix, $\boldsymbol{\Omega}$.
+The matrix $\boldsymbol{\Omega}$ is the `r n` x `r n` matrix whose elements are the covariances between the portfolios
+```{r}
+V <- cov(data.portfolio)
+V
+```
+
+##1c. Find the intermediate values of A, B, C, and D.
+The intermediate values, which will make the later computation easier, are found through solving the original optimization problem and some matrix algebraic manipulation. 
+
+###Intermediate Value A
+The value of A is found to be $A = \boldsymbol{\iota}' \boldsymbol{\Omega}^{-1} \boldsymbol{\mu}$.
+
+```{r}
+A <- t(i) %*% solve(V) %*% mu
+A
+```
+
+###Intermediate Value B
+The value of B is found to be $B = \boldsymbol{\mu}' \boldsymbol{\Omega}^{-1} \boldsymbol{\mu}$.
+
+```{r}
+B <- t(mu) %*% solve(V) %*% mu
+B
+```
+
+###Intermediate Value C
+The value of C is found to be $C = \boldsymbol{\iota}' \boldsymbol{\Omega}^{-1} \boldsymbol{\iota}$.
+
+```{r}
+C <- t(i) %*% solve(V) %*% i
+C
+```
+
+###Intermediate Value D
+The value of D is found to be $D = BC - A^2$.
+
+```{r}
+D <- B * C - A^2
+D
+```
+
+##1d. Find the 6x1 vector $\mathbf{g}$
+The vector $\mathbf{g}$ is the `r n` x 1 vector which is equal to $\frac{1}{D} \left[ B(\boldsymbol{\Omega}^{-1}\boldsymbol{\iota}) - A(\boldsymbol{\Omega}^{-1}\boldsymbol{\mu}) \right]$.
+
+```{r}
+g <- 1/drop(D) * (drop(B) * (solve(V) %*% i) - drop(A) * (solve(V) %*% mu))
+g
+```
+
+##1e. Find the 6x1 vector $\mathbf{h}$
+The vector $\mathbf{h}$ is the `r n` x 1 vector which is equal to $\frac{1}{D} \left[ C(\boldsymbol{\Omega}^{-1}\boldsymbol{\mu}) - A(\boldsymbol{\Omega}^{-1}\boldsymbol{\iota}) \right]$.
+
+```{r}
+h <- 1/drop(D) * (drop(C) * (solve(V) %*% mu) - drop(A) * (solve(V) %*% i))
+h
+```
+
+
+##1f. Find the globabl minimum variance portfolio, $w_g$
+The formula for the weights of the global minimum portfolio is $w_g = \frac{1}{C} \boldsymbol{Omega}^{-1}\boldsymbol{\iota}$.
+
+```{r}
+w.gl <- 1/drop(C) * solve(V) %*% i
+w.gl
+```
+
+##1g. Find the globabl minimum variance portfolio, $\mu_g$
+The formula for the return of the global minimum portfolio is $\mu_g = \frac{A}{C}$.
+```{r}
+mu.gl <- drop(A) / drop(C)
+mu.gl
+```
+
+##1h. Find the globabl minimum variance portfolio, $\sigma_g$
+The formula for the standard deviationof the global minimum portfolio is $\sigma_g = \frac{1}{C}$.
+```{r}
+sigma.gl <- 1 / drop(C)
+sigma.gl
+```
+
+##1i. Find weight for an efficient portfolio with a mean equal to 3.5%, and call this portfolio $p$
+The formula for the optimal weight for a portfolio $p$ is $w_p = \mathbf{g} + \mathbf{h}\mu_p$.
+```{r}
+mu.p <- .035
+w.p <- g + h * mu.p
+w.p
+```
+
+
+
+
