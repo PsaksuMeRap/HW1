@@ -46,7 +46,7 @@ data1 <- select(data.1, date,smlo_vwret,smme_vwret,smhi_vwret,bilo_vwret,bime_vw
 data2 <- select(data.2, date = dateff, rf)
 
 #Create final data set of interest
-data <- inner_join(data1, data2, by="date")
+data <- inner_join(data1, data2)
 data.portfolio <- select(data, -date, -rf)
 
 n <- ncol(data.portfolio) #number of assets
@@ -125,7 +125,8 @@ The vector $\mathbf{h}$ is the `r n` x 1 vector which is equal to $\frac{1}{D} \
 ```{r}
 h <- 1/drop(D) * (drop(C) * (solve(V) %*% mu) - drop(A) * (solve(V) %*% i))
 h <- h[,1]
-g
+h
+
 ```
 
 
@@ -164,11 +165,11 @@ w.p
 The return of the portfolio which is uncorrelated with portfolio $p$ is $\mu_{op} = \frac{D/C^2}{\mu_p - D/C} + \frac{A}{C}$.
 
 ```{r}
-mu.0p <- (D/C^2)/(mu.p - D/C) + A/C
+mu.0p <- -(D/C^2)/(mu.p - A/C) + A/C
 mu.0p
 ```
 
-The weight vector of the portfolio is given by $\mathbf{w}_{op} <- \mathbf{g} + \mathbf{h}\mu_{op}$.
+The weight vector of the portfolio is given by $\mathbf{w}_{op} = \mathbf{g} + \mathbf{h}\mu_{op}$.
 
 ```{r}
 w.0p <- g + h * mu.0p
@@ -197,6 +198,21 @@ summary(reg)
 
 As we can see, our regression beta is $\beta =$ `r summary(reg)$coef[2,1]`.
 
+##1l. Verify that the average return of portfolio 1 can be expressed exactly as $\mu_{SMLO} = \mu_{op} + \beta (\mu_p - \mu_{op})$
+First, let's find the mean of SMLO from our data
+
+```{r}
+mu[1]
+```
+
+Let's now find the mean using our expression
+
+```{r}
+mu.expression <- mu.0p + summary(reg)$coef[2,1] * (mu.p - mu.0p)
+mu.expression
+```
+Does the average return of SMLO equal the expression? `r round(mu.expression, 5) == round(mu[1],5)`!
+
 ##1m. Use all 6 portfolios and plot them in mean-standard deviation space. Which portfolio shows the best return per unit of risk?
 
 To plot our points and find the portfolio with the highest return per unit of risk, we first have to find their standard deviations, which we denote as the vector $\boldsymbol{\sigma}$.
@@ -218,7 +234,9 @@ max(retrisk)
 and plot them in mean-standard deviation space
 
 ```{r}
-qplot(s, mu) + theme_bw()
+qplot(s, mu) + theme_bw() + xlab("Standard Deviation") +
+  ylab("Return") +
+  ggtitle("Efficient Frontier and Optimal Portfolio Plot")
 ```
 
 ##1n. Use the matrix based techniques learned in class to derive the mean-variance frontier and plot the 6 portfolios
@@ -232,10 +250,10 @@ return.eff = NULL
 std.eff = NULL
 
 #loop for every alpha and write to our intialized vectors
-for (i in 1:length(alpha)) {
-  return.eff[i] = alpha[i] * mu.gl + (1 - alpha[i]) * mu.p
-  weight.eff = alpha[i] * (g + h*mu.gl) + (1 - alpha[i]) * (g + h*mu.p)
-  std.eff[i] = sqrt(diag(t(weight.eff) %*% V %*% weight.eff))
+for (j in 1:length(alpha)) {
+  return.eff[j] = alpha[j] * mu.gl + (1 - alpha[j]) * mu.p
+  weight.eff = alpha[j] * (g + h*mu.gl) + (1 - alpha[j]) * (g + h*mu.p)
+  std.eff[j] = sqrt(diag(t(weight.eff) %*% V %*% weight.eff))
 }
 
 #Create data table for graph
@@ -245,7 +263,60 @@ frontier.data <- data.frame(cbind(return.eff, std.eff))
 ggplot() + 
   geom_path(data=frontier.data, aes(x=std.eff, y=return.eff)) + 
   geom_point(aes(x=s, y=mu)) + 
+  xlab("Standard Deviation") +
+  ylab("Return") +
+  ggtitle("Efficient Frontier and Portfolio Plots") +
   theme_bw()
 ```
 
+##1o. Using the average T-Bill rate from the Fama French data, calculate the expected return and standard deviation of the optimal portfolio on the efficient frontier and graph
+The average one month T-Bill rate over our time period of interest can be used to find the optimal portfolio.
 
+```{r}
+rf <- mean(data$rf)
+rf
+```
+We use this avearge as a proxy for the risk free rate, $r_f =$ `r rf`, we can find the weight of this optimal portfolio $w_t = \frac{1}{\boldsymbol{\iota}'\mathbf{z}}$ where $\mathbf{z} = \boldsymbol{\Omega}^{-1}(\boldsymbol{\mu}-r_f)$.
+
+```{r}
+rf <- mean(data$rf)
+z <- solve(V) %*% (mu - rf)
+z.sum <- t(i) %*% z
+w_t <- 1/drop(z.sum) * z
+w_t <- w_t[,1]
+w_t
+```
+
+Using these weights, we can find the expected return and standard deviation of the optimal portfolio.
+
+```{r}
+mu.t <- mean(as.matrix(data.portfolio) %*% w_t)
+mu.t
+std.t <- sqrt(diag(t(w_t) %*% V %*% w_t))
+std.t
+```
+
+We can plot both of these points and see where this lie on the efficient frontier.
+
+```{r}
+#Plot frontier and portfolios
+ggplot() + 
+  geom_path(data=frontier.data, aes(x=std.eff, y=return.eff)) + 
+  geom_point(aes(x=s, y=mu)) + 
+  geom_point(aes(x=std.t, y=mu.t), colour="#CC0000") +
+  xlab("Standard Deviation") +
+  ylab("Return") +
+  ggtitle("Efficient Frontier and Optimal Portfolio Plot") +
+  theme_bw()
+```
+
+##1p. Assume a risk aversion coefficient of $A = 3$ and calculate the proportion of investment in the risky optimal portfolio and the risk free asset.
+
+The proportion invested into the complete portfolio, denoted $y$ is given by the equation $y = \frac{E(r_t) - r_f}{0.5A\sigma_t^2}$.
+
+```{r}
+A = 3
+y <- (mu.t - rf)/(0.5 * A * std.t^2)
+y
+```
+This means that the amount invested in the optimal portfolio is $y=$ `r y` and the amount invested in the risk free is $1-y =$ `r 1 - y`.
