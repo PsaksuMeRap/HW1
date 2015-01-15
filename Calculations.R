@@ -61,8 +61,51 @@ mu.gl <- drop(A) / drop(C)
 
 #1h Find the globabl minimum variance portfolio sigmag
 sigma.gl <- 1 / drop(C)
-sigma.gl
 
-#Find weight for an efficient portfolio with a mean equal to 3.5%, and call this portfolio p
+#1i Find weight for an efficient portfolio with a mean equal to 3.5%, and call this portfolio p
 mu.p <- .035
 w.p <- g + h * mu.p
+
+#1j Find the wieghts, $w_{op}$ and the mean , $\mu_{op}$ for portfolio $p$'s zero beta portfolio
+mu.0p <- (D/C^2)/(mu.p - D/C) + A/C
+mu.0p
+
+#1k Find the regression beta of the first portfolio's return with respect to portfolio $p$.
+
+port_vwret <- as.matrix(data.portfolio) %*% w.p
+port_vwret <- data.frame(port_vwret)
+data <- tbl_df(cbind(data, port_vwret))
+
+#Creating separate regression data table in percent instead of decimals 
+data.regression <- select(data, smlo_vwret, port_vwret) * 100
+head(data.regression, n=4)
+
+#Run regression
+reg <- lm(smlo_vwret ~ port_vwret, data=data.regression)
+results <- summary(reg)
+results$coef[1,2]
+
+#Standard Deviation and Plot
+v <- diag(V)
+s <- sqrt(v)
+retrisk <- mu/s
+retrisk
+max(retrisk)
+qplot(s, mu) + theme_bw()
+
+#Efficient Frontier
+
+alpha <- seq(0,2,.01)
+return.eff = NULL
+std.eff = NULL
+
+for (i in 1:length(alpha)) {
+return.eff[i] = alpha[i] * mu.gl + (1 - alpha[i]) * mu.p
+weight.eff = alpha[i] * (g + h*mu.gl) + (1 - alpha[i]) * (g + h*mu.p)
+std.eff[i] = sqrt(diag(t(weight.eff) %*% V %*% weight.eff))
+}
+
+frontier.data <- data.frame(cbind(return.eff, std.eff))
+ggplot() + 
+  geom_path(data=frontier.data, aes(x=std.eff, y=return.eff)) + 
+  geom_point(aes(x=s, y=mu)) + theme_bw()
