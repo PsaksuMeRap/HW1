@@ -12,7 +12,7 @@ output:
 
 #Data Notes
 
-The data used in the analysis is the Fama French portfolio and factors database from WRDS. The data are monthly value weighted return observations on the 6 portfolio constructed by Fama and French formed on size and book to market. The time period of the data is from March 2000 to the end of July 2014. The portfolio variable names are as follows:
+The data used in the analysis is the Fama French portfolio and factors database from WRDS. The data are monthly value weighted return observations on the 6 portfolio constructed by Fama and French formed on size and book to market. The time period of the data is from the end of March 2000 to the end of July 2014. The portfolio variable names are as follows:
 
 - SMLO (small size and low book-to-market ratio equities),
 - SMME (small size and medium book-to-market ratio equities),
