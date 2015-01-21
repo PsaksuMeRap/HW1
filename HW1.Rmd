@@ -4,6 +4,7 @@ author: "Ivan Rodriguez"
 output:
   pdf_document:
     toc: true
+    toc_depth: 3
     highlight: default
 ---
 
@@ -76,7 +77,7 @@ V
 ```
 
 ##1c. Find the intermediate values of A, B, C, and D.
-The intermediate values, which will make the later computation easier, are found through solving the original optimization problem and some matrix algebraic manipulation. 
+The intermediate values, which will make the later computations easier, are found through solving the original optimization problem and some matrix algebraic manipulation. 
 
 ###Intermediate Value A
 The value of A is found to be $A = \boldsymbol{\iota}' \boldsymbol{\Omega}^{-1} \boldsymbol{\mu}$.
@@ -130,7 +131,7 @@ h
 ```
 
 
-##1f. Find the globabl minimum variance portfolio, $w_g$
+##1f. Find the globabl minimum variance portfolio weights, $w_g$
 The formula for the weights of the global minimum portfolio is $w_g = \frac{1}{C} \boldsymbol{\Omega}^{-1}\boldsymbol{\iota}$.
 
 ```{r}
@@ -139,21 +140,21 @@ w.gl <- w.gl[,1]
 w.gl
 ```
 
-##1g. Find the globabl minimum variance portfolio, $\mu_g$
+##1g. Find the globabl minimum variance portfolio mean, $\mu_g$
 The formula for the return of the global minimum portfolio is $\mu_g = \frac{A}{C}$.
 ```{r}
 mu.gl <- drop(A) / drop(C)
 mu.gl
 ```
 
-##1h. Find the globabl minimum variance portfolio, $\sigma_g$
-The formula for the standard deviationof the global minimum portfolio is $\sigma_g = \frac{1}{C}$.
+##1h. Find the globabl minimum variance portfolio variance, $\sigma^2_g$
+The formula for the standard deviation of the global minimum portfolio is $\sigma_g = \frac{1}{C}$.
 ```{r}
-sigma.gl <- 1 / drop(C)
-sigma.gl
+sigma.gl <- sqrt(1 / drop(C))
+sigma.gl^2
 ```
 
-##1i. Find weight for an efficient portfolio with a mean equal to 3.5%, and call this portfolio $p$
+##1i. Find the weights for an efficient portfolio with a mean equal to 3.5%, and call this portfolio $p$
 The formula for the optimal weight for a portfolio $p$ is $w_p = \mathbf{g} + \mathbf{h}\mu_p$.
 ```{r}
 mu.p <- .035
@@ -162,7 +163,7 @@ w.p
 ```
 
 ##1j. Find the weights, $\mathbf{w}_{op}$, and the mean , $\mu_{op}$, for portfolio $p$'s zero beta portfolio
-The return of the portfolio which is uncorrelated with portfolio $p$ is $\mu_{op} = \frac{D/C^2}{\mu_p - D/C} + \frac{A}{C}$.
+The return of the portfolio which is uncorrelated with portfolio $p$ is $\mu_{op} = \frac{D/C^2}{\mu_p - A/C} + \frac{A}{C}$.
 
 ```{r}
 mu.0p <- -(D/C^2)/(mu.p - A/C) + A/C
@@ -177,7 +178,7 @@ w.0p
 ```
 
 ##1k. Find the regression beta of the first portfolio's return with respect to portfolio $p$.
-Now, we will SMLO's return's on the portfolio $p$'s return. In order to run the regression, first we have to find the return of our portfolio $p$ over the same time period as SMLO, denoted as $\boldsymbol{\mu}_P$. We simply use the following formula, $\boldsymbol{\mu}_P = \mathbf{X} \mathbf{w}_p$ where $\mathbf{X}$ is our data matrix. 
+Now, we will regress SMLO's returns on the portfolio $p$'s returns. In order to run the regression, first we have to find the returns of our portfolio $p$ over the same time period as SMLO, denoted as $\boldsymbol{\mu}_P$. We simply use the following formula, $\boldsymbol{\mu}_P = \mathbf{X} \mathbf{w}_p$ where $\mathbf{X}$ is our data matrix. 
 
 ```{r}
 port_vwret <- as.matrix(data.portfolio) %*% w.p
@@ -228,20 +229,19 @@ Now, we can find the portfolio with the largest return per unit of risk
 ```{r}
 retrisk <- mu/s
 retrisk
-max(retrisk)
 ```
 
-and plot them in mean-standard deviation space
+ which is `r names(retrisk)[which.max(retrisk)]` = `r max(retrisk)`; and plot the portfolios in mean-standard deviation space
 
 ```{r}
 qplot(s, mu) + theme_bw() + xlab("Standard Deviation") +
   ylab("Return") +
-  ggtitle("Efficient Frontier and Optimal Portfolio Plot")
+  ggtitle("Fama French Portfolios in Mean Standard Deviation Space")
 ```
 
 ##1n. Use the matrix based techniques learned in class to derive the mean-variance frontier and plot the 6 portfolios
 
-To plot the mean variance frontier, we first have to find the weights of the optimal weights of any efficient portfolio. We can plot each efficient frontier if we had their return and variance. To find the return, we can use this formula: $\mu_e = \alpha \mu_g + (1-\alpha)\mu_p$. To find the variance, we first have to find the weight of the efficient frontier this using this formula: $w_e = \alpha (\mathbf{g} + \mathbf{h}\mu_g) + \alpha (\mathbf{g} + \mathbf{h}\mu_p)$.
+To plot the mean variance frontier, we first have to find the linear combination of weights of any two mean variance portfolios, $w_e = \alpha (\mathbf{g} + \mathbf{h}\mu_g) + (1-\alpha) (\mathbf{g} + \mathbf{h}\mu_p)$. Next we find the return of of each of these linear combination, $\mu_e = \alpha \mu_g + (1-\alpha)\mu_p$. To plot the frontier, we need to find the variance using our weights.
 
 ```{r}
 #Initialize vectors that are going to be used
@@ -265,7 +265,7 @@ ggplot() +
   geom_point(aes(x=s, y=mu)) + 
   xlab("Standard Deviation") +
   ylab("Return") +
-  ggtitle("Efficient Frontier and Portfolio Plots") +
+  ggtitle("Mean Variance Frontier and Portfolio Plots") +
   theme_bw()
 ```
 
@@ -276,7 +276,7 @@ The average one month T-Bill rate over our time period of interest can be used t
 rf <- mean(data$rf)
 rf
 ```
-We use this avearge as a proxy for the risk free rate, $r_f =$ `r rf`, we can find the weight of this optimal portfolio $w_t = \frac{1}{\boldsymbol{\iota}'\mathbf{z}}$ where $\mathbf{z} = \boldsymbol{\Omega}^{-1}(\boldsymbol{\mu}-r_f)$.
+We use this avearge as a proxy for the risk free rate, $r_f =$ `r rf`, we can find the weight of this optimal portfolio $w_t = \frac{1}{\boldsymbol{\iota}'\mathbf{z}} \mathbf{z}$ where $\mathbf{z} = \boldsymbol{\Omega}^{-1}(\boldsymbol{\mu}-r_f)$.
 
 ```{r}
 rf <- mean(data$rf)
@@ -301,12 +301,13 @@ We can plot both of these points and see where this lie on the efficient frontie
 ```{r}
 #Plot frontier and portfolios
 ggplot() + 
-  geom_path(data=frontier.data, aes(x=std.eff, y=return.eff)) + 
-  geom_point(aes(x=s, y=mu)) + 
-  geom_point(aes(x=std.t, y=mu.t), colour="#CC0000") +
+  geom_path(data=frontier.data, aes(x=std.eff, y=return.eff)) + #Mean Variance Frontier
+  geom_point(aes(x=s, y=mu)) + #FF portfolios
+  geom_point(aes(x=std.t, y=mu.t), colour="#CC0000", shape=8) + #Tangent Portfolio
+  geom_point(aes(x=sigma.gl, y=mu.gl), colour="#009E73", shape=4) + #Min Var Portfolio
   xlab("Standard Deviation") +
   ylab("Return") +
-  ggtitle("Efficient Frontier and Optimal Portfolio Plot") +
+  ggtitle("Mean Variance Frontier and Optimal Portfolio Plot") +
   theme_bw()
 ```
 

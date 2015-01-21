@@ -26,8 +26,8 @@ data2 <- select(data.2, date = dateff, rf)
 data <- merge(data1, data2)
 data.portfolio <- select(data, -date, -rf)
 
-write.csv(data, file="FinalData.csv")
-?cov()
+#write.csv(data, file="FinalData.csv")
+
 ### HW PROBLEMS ##
 
 #Initializing vectors and values of interest
@@ -124,11 +124,19 @@ data.portfolio
 mu.t <- mean(as.matrix(data.portfolio) %*% w_t)
 std.t <- sqrt(diag(t(w_t) %*% V %*% w_t))
 
+CAL <- rbind(cbind(mu.t, std.t),c(rf, 0))
+CAL <- tbl_df(data.frame(CAL))
+
 ggplot() + 
-  geom_path(data=frontier.data, aes(x=std.eff, y=return.eff)) + 
-  geom_point(aes(x=s, y=mu)) + 
-  geom_point(aes(x=std.t, y=mu.t)) +
+  geom_path(data=frontier.data, aes(x=std.eff, y=return.eff)) + #Mean Variance Frontier
+  geom_point(aes(x=s, y=mu)) + #Individual Portfolio plot
+  geom_point(aes(x=std.t, y=mu.t)) + #Optimal Portfolio
+  geom_point(aes(x=sigma.gl, y=mu.gl)) + #Global min var
+  geom_line(data=CAL, aes(x=std.t, y=mu.t)) + #Capital Alloc Line
   theme_bw()
+
+mu.gl
+sigma.gl
 
 #1p proportion in complete portfolio
 
